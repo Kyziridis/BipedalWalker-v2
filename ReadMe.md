@@ -22,7 +22,7 @@
     $ pip install -e '.[box2d]'
 
     # test that it worked 
-    $ python >>> import gym >>> gym.make('LunarLander-v2')
+    $ python >>> import gym >>> gym.make('BipedalWalker-v2')
 
     # The above instructions are for linux systems. 
     # We do not use proprietary software so we do not have instructions for Windows or MacOS.  
