@@ -77,9 +77,9 @@ class AGENT:
     def MODEL(self):                     
         # Build Network
         model = Sequential()
-        model.add(Dense(128, input_dim=nx, activation='relu'))
-        model.add(Dense(128,  activation='relu'))
-        model.add(Dense(self.ny, activation='linear'))
+        model.add(Dense(400, input_dim=nx, activation='relu'))
+        model.add(Dense(300,  activation='relu'))
+        model.add(Dense(self.ny, activation='tanh'))
         model.compile(loss='mse',
                       optimizer=Adam(lr=self.lr))
                     
