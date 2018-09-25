@@ -30,7 +30,7 @@
 You can visit [openAI gym](https://gym.openai.com/envs/#box2d) in order to inspect this 
 kind of environments.<br>	
 
-3. Other dependencies : Keras, matplotlib, numpy, random, rensor flow
+3. Other dependencies : Keras, matplotlib, numpy, random, tensorflow
 
 4. Do not use any Python-IDE to run the code if you want to see 
 the game-simulation (environment-render). 
