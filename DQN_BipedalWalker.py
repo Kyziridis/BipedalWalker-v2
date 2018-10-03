@@ -70,22 +70,20 @@ class AGENT:
         #self.ep_obs_new.append(observation_new)
         #self.ep_flags.append(flag)
         
-
     def save(self,name):
         self.model.save(name)
 
     def MODEL(self):                     
         # Build Network
         model = Sequential()
-        model.add(Dense(400, input_dim=nx, activation='relu'))
+        model.add(Dense(400, input_dim=self.nx, activation='relu'))
         model.add(Dense(300,  activation='relu'))
-        model.add(Dense(self.ny, activation='tanh'))
+        model.add(Dense(self.ny, activation='linear'))
         model.compile(loss='mse',
                       optimizer=Adam(lr=self.lr))
                     
         return model
-    
-    
+        
     def TRAIN(self, batch):
         sample_indx = random.sample(self.deck, batch)
         self.los = []
@@ -157,21 +155,20 @@ if __name__ == '__main__':
         start = time.time()
         
         while True:            
-            if RENDER_ENV==True:
+            if RENDER_ENV:
                 env.render()
             
             action = agent.choose_action(observation)
             observation_new, reward, flag, inf = env.step(action)
             observation_new = observation_new.reshape(1,-1)                    
-            # Append
-            #reward = reward if not flag else -10
+            # Store new information
             agent.storing(observation, action, reward, observation_new, flag)   
             observation = observation_new         
-            
+            # Measure the time
             end = time.time()
             time_space = end - start
             
-            if time_space > 15:
+            if time_space > 20:
                 flag = True
           
             # Sum the episode rewards
@@ -187,7 +184,7 @@ if __name__ == '__main__':
                 rew_var.append(var)
                 max_reward = np.max(rewards_over_time)
                 episode_max = np.argmax(rewards_over_time)
-                if ep_rew_total >=200 :
+                if ep_rew_total >=300 :
                     w = w + 1
                     agent.save(s_link)
                                         
