@@ -9,6 +9,8 @@ Created on Wed Apr 25 20:41:53 2018
 #from __future__ import print_function
 import keras
 from keras.models import load_model
+from keras.initializers import RandomUniform
+from keras.regularizers import l2
 from keras import backend as K
 from keras.utils.np_utils import to_categorical
 from keras.models import Sequential, Model
@@ -33,9 +35,10 @@ class AGENT:
         #self.l_link =l_link 
         self.s_link =s_link 
         self.deck = deque(maxlen=2000)
-        self.e = 0.7
+        self.e = 1.0
         self.e_= 0.01
         self.dc= 0.995
+        self.weight_decay = 10**-2
         self.los = []
         
         
@@ -76,9 +79,10 @@ class AGENT:
     def MODEL(self):                     
         # Build Network
         model = Sequential()
-        model.add(Dense(400, input_dim=self.nx, activation='relu'))
-        model.add(Dense(300,  activation='relu'))
-        model.add(Dense(self.ny, activation='linear'))
+        model.add(Dense(512, input_dim=self.nx, activation='relu' ,kernel_regularizer=l2(self.weight_decay)))
+        model.add(Dense(256,  activation='relu', kernel_regularizer=l2(self.weight_decay)))
+        model.add(Dense(self.ny, activation='tanh',\
+                        bias_initializer=RandomUniform(minval=-0.003, maxval=0.003)))
         model.compile(loss='mse',
                       optimizer=Adam(lr=self.lr))
                     
@@ -89,13 +93,13 @@ class AGENT:
         self.los = []
         
         for observation, act, reward, obs_new, done in sample_indx:            
-            target = reward
+            target = np.repeat(reward,4).reshape(1,-1)
             if not done: #((1-ALPHA)*xreward)+ (ALPHA* (GAMMA * futurereward))
-                target = ( (1.0-0.1)*reward + 0.1 * (self.gamma*np.amax(self.model.predict(obs_new)[0])))                
-            
-            target_old = self.model.predict(observation)
+                target = ( (1.0-0.125)*reward + 0.125 * (self.gamma*self.model.predict(obs_new)[0]))                
+                target = target.reshape(1,-1)
+            #target_old = self.model.predict(observation)
             #target_old[0][act] = target
-            target_old[0] = target
+            target_old = target
             # Train
             #K.set_session(K.tf.Session(config=K.tf.ConfigProto(intra_op_‌​parallelism_threads=‌​32, inter_op_parallelism_threads=32)))
             history = self.model.fit(x=observation, y=target_old,\
@@ -168,7 +172,7 @@ if __name__ == '__main__':
             end = time.time()
             time_space = end - start
             
-            if time_space > 20:
+            if time_space > 10:
                 flag = True
           
             # Sum the episode rewards
@@ -212,6 +216,9 @@ if __name__ == '__main__':
                 if max_reward > RENDER_REWARD_MIN: RENDER_ENV = True
                 
                 break
+    
+    np.save("rewards_over_time", rewards_over_time)
+    np.save("mean100", mean_100) 
             
     plt.figure(1)
     plt.plot(error)
@@ -226,11 +233,7 @@ if __name__ == '__main__':
     plt.ylabel("Epsilon value")
     plt.title("Epsilon Vs Episodes")
     plt.show()
-    
-    np.save("rewards_over_time", rewards_over_time)
-    np.save("mean100", mean_100)            
-            
-            
+                
     plt.figure(1)            
     plt.plot(rewards_over_time, label="Rewards")
     plt.plot(rew_mean, label="Mean")
