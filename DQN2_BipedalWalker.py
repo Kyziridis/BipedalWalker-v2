@@ -79,8 +79,8 @@ class AGENT:
     def MODEL(self):                     
         # Build Network
         model = Sequential()
-        model.add(Dense(512, input_dim=self.nx, activation='relu' ,kernel_regularizer=l2(self.weight_decay)))
-        model.add(Dense(256,  activation='relu', kernel_regularizer=l2(self.weight_decay)))
+        model.add(Dense(400, input_dim=self.nx, activation='relu' ,kernel_regularizer=l2(self.weight_decay)))
+        model.add(Dense(300,  activation='relu', kernel_regularizer=l2(self.weight_decay)))
         model.add(Dense(self.ny, activation='tanh',\
                         bias_initializer=RandomUniform(minval=-0.003, maxval=0.003)))
         model.compile(loss='mse',
@@ -95,7 +95,7 @@ class AGENT:
         for observation, act, reward, obs_new, done in sample_indx:            
             target = np.repeat(reward,4).reshape(1,-1)
             if not done: #((1-ALPHA)*xreward)+ (ALPHA* (GAMMA * futurereward))
-                target = ( (1.0-0.125)*reward + 0.125 * (self.gamma*self.model.predict(obs_new)[0]))                
+                target = ( (1.0-0.1)*reward + 0.1 * (self.gamma*self.model.predict(obs_new)[0]))                
                 target = target.reshape(1,-1)
             #target_old = self.model.predict(observation)
             #target_old[0][act] = target
@@ -220,21 +220,22 @@ if __name__ == '__main__':
     np.save("rewards_over_time", rewards_over_time)
     np.save("mean100", mean_100) 
             
-    plt.figure(1)
+    plt.figure(figsize=(8,6))
     plt.plot(error)
     plt.xlabel("Episodes")
     plt.ylabel("Average Error")
     plt.title("Average_Loss Vs Episodes")
     plt.show()
+    plt.savefig("Average_Loss_Vs_Episodes.png")
     
-    plt.figure(1)
+    plt.figure(figsize=(8,6))
     plt.plot(epsilon)
     plt.xlabel("Episodes")
     plt.ylabel("Epsilon value")
     plt.title("Epsilon Vs Episodes")
     plt.show()
                 
-    plt.figure(1)            
+    plt.figure(figsize=(8,6))            
     plt.plot(rewards_over_time, label="Rewards")
     plt.plot(rew_mean, label="Mean")
     plt.plot(rew_var, label="Variance")    
@@ -243,9 +244,14 @@ if __name__ == '__main__':
     plt.title("Rewards per Episode")
     plt.legend(loc=0)
     plt.show()        
+    plt.savefig("Rewards_per_Episode.png")        
             
-            
-            
+    plt.figure(figsize=(8,6))
+    plt.plot(mean_100)
+    plt.xlabel("100_episodes")
+    plt.ylabe("Mean_value")
+    plt.xticks(np.arange(0,9000,100))
+    plt.savefig("mean_100.png")        
             
             
             
