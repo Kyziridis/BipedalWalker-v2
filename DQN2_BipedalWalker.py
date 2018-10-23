@@ -249,7 +249,7 @@ if __name__ == '__main__':
     plt.figure(figsize=(8,6))
     plt.plot(mean_100)
     plt.xlabel("100_episodes")
-    plt.ylabe("Mean_value")
+    plt.ylabel("Mean_value")
     plt.xticks(np.arange(0,9000,100))
     plt.savefig("mean_100.png")        
             
