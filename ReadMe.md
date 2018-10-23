@@ -1,7 +1,7 @@
 # BipedalWalker-v2
 
 ### [OpenAI](https://gym.openai.com/envs/BipedalWalkerHardcore-v2/) game.<br>
-##### The repo is under developing.
+##### The repo is under development.
 #### Methods
 
 1. Deep-Q-Learning Networks based on Reinforcement-Learning<br>
