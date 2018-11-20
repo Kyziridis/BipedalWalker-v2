@@ -29,8 +29,7 @@
     # The above instructions are for linux systems. 
     # We do not use proprietary software so we do not have instructions for Windows or MacOS.  
 ```
-You can visit [openAI gym](https://gym.openai.com/envs/#box2d) in order to inspect this 
-kind of environments.<br>	
+You can visit [openAI gym](https://gym.openai.com/envs/#box2d) in order to inspect various environments.<br>	
 
 3. Other dependencies : Keras, matplotlib, numpy, random, tensorflow
 
