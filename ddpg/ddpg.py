@@ -25,7 +25,7 @@ import random
 from collections import deque
 import tensorflow as tf
 import os
-os.chdir("/home/dead/Documents/Master_Research/ddpg/")
+#os.chdir("/home/dead/Documents/Master_Research/ddpg/")
 from OrnsteinUhlenbeckProcess import OrnsteinUhlenbeckProcess
 from tqdm import tqdm
     
@@ -370,6 +370,7 @@ if __name__ == '__main__':
                     print("Reward:", ep_rew_total)
                     print("Maximum Reward: " + str(max_reward) + "  on Episode: " + str(episode_max))
                     print("Times win: " + str(w))
+                    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n")
                 
                 if i % 100==0:
                     print("Mean reward of the past 100 episodes: ", str(np.mean(rewards_over_time[-100:])))
