@@ -1,14 +1,15 @@
 # BipedalWalker-v2
 
 ### [OpenAI](https://gym.openai.com/envs/BipedalWalkerHardcore-v2/) game.<br>
-##### The repo is under development.
+##### The repo is under development, there are some bugs in some of the scripts.
 #### Methods
 
 1. Deep-Q-Learning Networks based on Reinforcement-Learning<br>
 2. Experiment with Recurrent Deterministic Policy Gradient Methods
-3. General Research about state-of-the-art reinforcement learning algorithms
+3. General research on reinforcement learning algorithms
 4. Actor-Critic Networks 
-5. LSTM
+5. A2C Algorithms
+6. PPO
 <br>
 
 **Instructions**<br>
