@@ -91,6 +91,10 @@ class AGENT:
         lidar = observation[0][14:].reshape((1,10))
         # Use epsilon-greedy algorithm
         if np.random.rand() <= self.e : 
+            # epsilon Greedy             
+            if self.e >= self.e_:
+                self.e *= self.dc
+                epsilon.append(self.e)
             action_ = []
             values = []
             for i in range(10000):
@@ -327,7 +331,7 @@ if __name__ == '__main__':
                 
             counter +=1 
             action = agent.choose_action(observation)
-            action = np.clip(action+noise.generate(counter), -1,1)
+            action = np.clip(action, -1,1)
             action = action.reshape((4,))
             observation_new, reward, flag, inf = env.step(action)
             observation_new = observation_new.reshape((1,24))                    
@@ -388,12 +392,7 @@ if __name__ == '__main__':
         agent.deck.clear()
         tqdm_run.set_description("Reward: " + str(ep_rew_total))
         tqdm_run.refresh()
-            
-        # epsilon Greedy             
-        if agent.e >= agent.e_:
-            agent.e *= agent.dc
-            epsilon.append(agent.e)
-            
+                        
     # EndFor EPISODES 
     
     np.save("rewards_over_time", rewards_over_time)
