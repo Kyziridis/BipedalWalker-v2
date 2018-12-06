@@ -105,7 +105,7 @@ class AGENT:
             history = self.model.fit(x=observation, y=target_old,\
                                 #batch_size=1,\
                                 verbose=0,\
-                                epochs=1)
+                                epochs=5)
             self.los.append(history.history['loss'])    
             
             self.ep_obs, self.ep_rewards, self.ep_action, self.ep_obs_new, self.ep_flags = [], [], [], [], []
@@ -118,7 +118,7 @@ class AGENT:
 
 if __name__ == '__main__':
     
-    BATCH = 16
+    BATCH = 256
     rendering = input("Visualize rendering ? [y/n]:  ")
     
     s_link = "BipedalWalker_model.h5"
@@ -134,8 +134,8 @@ if __name__ == '__main__':
     # Observation and Action array length
     nx = env.observation_space.shape[0] 
     ny = env.action_space.shape[0]
-    lr = 0.001
-    gamma = 0.98
+    lr = 0.0001
+    gamma = 0.99
     agent = AGENT(nx,ny, lr, gamma, s_link)
     
     rewards_over_time = []
@@ -157,7 +157,7 @@ if __name__ == '__main__':
         observation = env.reset()         
         observation = observation.reshape(1,-1)                
         start = time.time()
-        
+        counter = 0
         while True:            
             if RENDER_ENV:
                 env.render()
@@ -165,6 +165,7 @@ if __name__ == '__main__':
             action = agent.choose_action(observation)
             observation_new, reward, flag, inf = env.step(action)
             observation_new = observation_new.reshape(1,-1)                    
+            counter +=1
             # Store new information
             agent.storing(observation, action, reward, observation_new, flag)   
             observation = observation_new         
@@ -195,6 +196,7 @@ if __name__ == '__main__':
                 print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
                 print("Episode: ", i)
                 print("Time: ", np.round(time_space, 2),"secs")
+                print("Traj: " + str(counter))
                 print("Reward:", ep_rew_total)
                 print("Maximum Reward: " + str(max_reward) + "  on Episode: " + str(episode_max))
                 print("Times win: " + str(w))
@@ -207,6 +209,7 @@ if __name__ == '__main__':
                     f.close()
                 
                 # Start training the Neural Network
+                #if BATCH >= len() 
                 hist, mm= agent.TRAIN(BATCH)
                 
                 epsilon.append(agent.e)

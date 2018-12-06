@@ -22,9 +22,9 @@ import matplotlib.pyplot as plt
 plt.switch_backend('agg')
 import time
 import numpy as np
-import gym, queue
+import gym
 import gym.wrappers
-from collections import deque
+#from collections import deque
 import tensorflow as tf
 import os
 import sys
@@ -35,6 +35,7 @@ EPISODES = int(sys.argv[1])
 BATCH = int(sys.argv[2])
 lstm = sys.argv[3]
 arg = int(sys.argv[4])
+epc = int(sys.argv[5])
 if lstm == 'y':
     lstm = True
 else:
@@ -64,23 +65,22 @@ class AGENT:
         self.nx_lidar = 10
         self.nx_obs = 14
         self.ny = ny[0]  #   Action space length       ny = env.action_space.n
-        self.lr_actor = 0.001 # Actor_Learning rate
-        self.lr_critic = 0.002 # Critic_Learning rate
+        self.lr_actor = 0.0001 # Actor_Learning rate
+        self.lr_critic = 0.0002 # Critic_Learning rate
         self.gamma = 0.99
         self.alpha = 0.1
         self.s_link =s_link
         self.sess = sess
         self.lstm = lstm
-        self.deck = deque(maxlen=4000)
+        #self.deck = deque(maxlen=4000)
 
         self.e = 1.0
         self.e_= 0.01
-        self.dc= 0.9999
+        self.dc= 0.999
         self.tau = 0.001
         self.weight_decay = 0.001
         self.los = []
         self.layers=[256,128]
-        self.qqq = queue.Queue()
 
         # Network init_functions
         self.k_r = l2(self.weight_decay)
@@ -127,14 +127,13 @@ class AGENT:
                 epsilon.append(self.e)
             action_=np.random.uniform(-1,1,4)
             return action_
-
+        
         action = self.actor_local.predict([DUMMY_ACTION,DUMMY_VALUE,lidar,state])
         return action
 
     def storing(self, observation, action, reward, observation_new, flags ):
         # Storing for replay-expirience
-        self.deck.append((observation, action, reward, observation_new, flags ))
-        self.qqq.put(np)
+        #self.deck.append((observation, action, reward, observation_new, flags ))
         self.ep_rewards.append(reward)
         self.ep_obs.append(observation)
         self.ep_act.append(action)
@@ -151,23 +150,19 @@ class AGENT:
         #input=[lidar_input,state_input]
         old_act = Input(shape=(4,))
         advantage = Input(shape=(1,))
+        #
         lidar_input = Input(shape=(self.nx_lidar,))
         lidar_conv = Dense(self.layers[0], activation='relu', kernel_regularizer=self.k_r)(lidar_input)
         #pool = MaxPooling1D(4)(lidar_conv)
         #flat = Flatten()(lidar_conv)
-        lidar_conv = Dropout(0.1)(lidar_conv)
-        #
+        lidar_conv = Dropout(0.05)(lidar_conv)
         #
         state_input = Input(shape=(self.nx_obs,))
         state_h1 = Dense(self.layers[0], activation='relu', kernel_regularizer=self.k_r)(state_input)
-        state_h1 = GaussianNoise(1.0)(state_h1)
+        #state_h1 = GaussianNoise(1.0)(state_h1)
         #gauss = Flatten()(gauss)
         #
-        #
         merged = Concatenate()([lidar_conv,state_h1])
-        #
-        #
-        #
         if self.lstm:
             merged = Reshape((self.layers[0]*2,1))(merged)
             merged_lstm = LSTM(self.layers[1],activation='relu',kernel_regularizer=self.k_r ,\
@@ -175,10 +170,7 @@ class AGENT:
         else:
             merged_lstm = Dense(self.layers[1],activation='relu',kernel_regularizer=self.k_r ,\
                                 kernel_initializer=self.initializer)(merged)
-        #gauss_ = GaussianNoise(1.0)(merged_lstm)
-        merged_lstm = Dropout(0.2)(merged_lstm)
-        #
-        #
+            
         output = Dense(self.ny, activation='tanh', kernel_regularizer=self.k_r,\
                        kernel_initializer=self.final_initializer)(merged_lstm)
 
@@ -189,8 +181,6 @@ class AGENT:
         return lidar_input,state_input, model
 
     def Critic(self):
-        # Build Network for Critic       
-        #input=[lidar_input,state_input,action_input]
         lidar_input = Input(shape=(self.nx_lidar,))
         lidar_conv = Dense(self.layers[0], activation='relu', kernel_regularizer=self.k_r,\
                            kernel_initializer=self.initializer)(lidar_input)
@@ -204,20 +194,16 @@ class AGENT:
         #state_h1 = Flatten()(state_h1)
         state_h1 = Dropout(0.5)(state_h1)
         #
-        #
         merge1 = Concatenate()([lidar_conv,state_h1])
         #merged_dense = Dense(self.layers[0], activation='relu')(merge1)
         #
-        #
         action_input = Input(shape=(self.ny,))
-        action_h1    = Dense(self.layers[0], activation='tanh',kernel_regularizer=self.k_r,\
+        action_h1    = Dense(self.layers[0], activation='relu',kernel_regularizer=self.k_r,\
                              kernel_initializer=self.initializer)(action_input)
         action_h1 = Dropout(0.5)(action_h1)
         #
-        #
         merge2 = Concatenate()([merge1,action_h1])
         #merge2 = Reshape((self.layers[0]*3,1))(merge2)
-        #
         #
         if self.lstm:
             merge2 = Reshape((self.layers[0]*3,1))(merge2)
@@ -228,57 +214,34 @@ class AGENT:
                                 kernel_initializer=self.initializer)(merge2)
         merged_lstm = Dropout(0.5)(merged_lstm)
         #
-        #
         output= Dense(1,activation='linear', kernel_regularizer=self.k_r,\
                       kernel_initializer=self.final_initializer)(merged_lstm)
         ##############
         model  = Model(input=[lidar_input,state_input,action_input], output=output)
-        adam  = Adam(lr=self.lr_actor, decay=0.5)
+        adam  = Adam(lr=self.lr_critic, decay=0.6)
         model.compile(loss="mse", optimizer=adam)
-        return lidar_input,state_input, action_input, model
+        return lidar_input,state_input, action_input, model     
+    
+    def _train_critic(self, lidar, state, act, Q_target):
+        for _ in range(epc):
+            self.critic_local.train_on_batch([lidar,state,act], [Q_target])
+        #self.critic_local.fit(x=[lidar,state,act],y=Q_target, verbose=0, epochs=10)
 
+    def _train_actor(self, lidar,state,act,rew):
+        current_reward = self.critic_target.predict([lidar,state,act])[0]
+        advantage = rew - current_reward
 
-    def _train_critic(self, sample_indx):
-        traj = sample_indx
-        for observation, act, reward, obs_new, done, ole in zip(traj[0],traj[1],traj[2],traj[3],traj[4], self.ep_rewards):
-            Q_target = np.array(reward).reshape(1,-1)
-            act = act.reshape(1,-1)
-            state = observation[0][:14].reshape((1,14))
-            lidar = observation[0][14:].reshape((1,10))
-            state_new = obs_new[0][:14].reshape((1,14))
-            lidar_new = obs_new[0][14:].reshape((1,10))
-            current_reward = self.critic_target.predict([lidar,state,act])[0][0]
-            advantage = Q_target - current_reward
-            if not done:
-                target_action = self.actor_target.predict([act,advantage,lidar_new,state_new])
-                future_reward = self.critic_target.predict([lidar_new,state_new, target_action])[0][0]
-                Q_target =(1-self.alpha)*Q_target + self.alpha* (self.gamma * (future_reward - current_reward))
-                Q_target = Q_target.reshape(1,-1)
+        predicted_action = self.actor_local.predict([act,advantage,lidar,state])
+        grads = self.sess.run(self.critic_grads, feed_dict = {
+                self.critic_lidar_input : lidar,
+                self.critic_state_input: state,
+                self.critic_action_input: predicted_action})[0]
 
-            self.critic_local.fit(x=[lidar,state,act],\
-                                  y=Q_target, verbose=0, epochs=10)
-
-    def _train_actor(self, sample_indx):
-        traj = sample_indx
-        for observation, act, reward, observation_new, _ in zip(traj[0],traj[1],traj[2],traj[3],traj[4]):
-            reward = np.array(reward).reshape(1,-1)
-            state = observation[0][:14].reshape((1,14))
-            lidar = observation[0][14:].reshape((1,10))
-            act = act.reshape(1,-1)
-            current_reward = self.critic_target.predict([lidar,state,act])[0][0]
-            advantage = reward - current_reward
-
-            predicted_action = self.actor_local.predict([act,advantage,lidar,state])
-            grads = self.sess.run(self.critic_grads, feed_dict = {
-                    self.critic_lidar_input : lidar,
-                    self.critic_state_input: state,
-                    self.critic_action_input: predicted_action})[0]
-
-            for _ in range(10):
-                self.sess.run(self.optimize, feed_dict={
-                        self.actor_lidar_input: lidar,
-                        self.actor_state_input: state,
-                        self.actor_critic_grads: grads})
+        for _ in range(epc):
+            self.sess.run(self.optimize, feed_dict={
+                    self.actor_lidar_input: lidar,
+                    self.actor_state_input: state,
+                    self.actor_critic_grads: grads})
 
     def update_target(self):
         """Soft update model parameters.
@@ -292,32 +255,52 @@ class AGENT:
         ##########################################################
         critic_local_weights  = self.critic_local.get_weights()
         critic_target_weights = self.critic_target.get_weights()
-                #
+        #
         for i in range(len(critic_target_weights)):
             critic_target_weights[i] = self.tau*critic_local_weights[i] + (1-self.tau)*critic_target_weights[i]
         self.critic_target.set_weights(critic_target_weights)
 
     def discount_rewards(self, rewards):
         discounted_rewards = np.zeros_like(rewards)
-
         for i in range(len(rewards)-2,-1,-1):
             discounted_rewards[i] = rewards[i] + rewards[i+1]*self.gamma**i
-
-        mm = np.mean(discounted_rewards)
-        std = np.std(discounted_rewards)
-        discounted_rewards = (discounted_rewards - mm) / std
         return discounted_rewards
-
-    def TRAIN(self, BATCH):
-        discounted_rewards = self.discount_rewards(self.ep_rewards)
-        sample_indx = [self.ep_obs[0:BATCH], self.ep_act[0:BATCH], discounted_rewards[0:BATCH],\
-                       self.ep_obs_new[0:BATCH], self.ep_flags[0:BATCH]]
+    
+    def create_batch(self,BATCH):
+        state, lidar, state_new ,lidar_new, current_reward, advantage =[],[],[],[],[], []
+        discounted_rewards = self.discount_rewards(self.ep_rewards[0:BATCH])
+        traj = [self.ep_obs[0:BATCH], self.ep_act[0:BATCH], discounted_rewards,\
+                       self.ep_obs_new[0:BATCH], self.ep_flags[0:BATCH]]    
+        rew = np.array(traj[2]).reshape(-1,1)
+        act = np.array(traj[1])
+        for observation, obs_new in zip(traj[0],traj[3]):
+            state.append(observation[0][:14].reshape((14,)))
+            lidar.append(observation[0][14:].reshape((10,)))
+            state_new.append(obs_new[0][:14].reshape((14,)))
+            lidar_new.append(obs_new[0][14:].reshape((10,)))
+            
+        state = np.array(state)
+        lidar  = np.array(lidar)
+        state_new  = np.array(state_new)
+        lidar_new  = np.array(lidar_new)
+        
+        current_reward = self.critic_target.predict([lidar,state,act])
+        advantage = rew - current_reward
+        target_action = self.actor_target.predict([act,advantage,lidar_new,state_new])
+        future_reward = self.critic_target.predict([lidar_new,state_new, target_action])
+        Q_target =current_reward + self.alpha*(rew + self.gamma * future_reward - current_reward)     
+        #print('cr: ' + str(current_reward.shape) + 'target: ' + str(target_action.shape) + 'fut: ' + str(future_reward.shape) + 'adv: ' + str(advantage.shape))
+        return lidar, state, act, Q_target , advantage, rew
+        
+    def TRAIN(self, BATCH):        
+        lidar, state, act, Q_target , advantage, rew = self.create_batch(BATCH)
         start_train = time.time()
         # Train Critic
-        self._train_critic(sample_indx) # TRain the network critic
+        #print('lidar:' + str(lidar.shape) + str(state.shape) + 'act: ' + str(act.shape) +\
+        #      'Q_target: ' + str(Q_target.shape) + 'adv: ' + str(advantage.shape)+ 'rew: ' + str(rew.shape) )
+        self._train_critic(lidar, state, act, Q_target) # TRain the network critic
         # Train Actor
-        self._train_actor(sample_indx)
-        #
+        self._train_actor(lidar,state,act,rew)
         # Update Weights 
         self.update_target() # Update the netokr local and target weights for actor AND critic
         end = time.time() - start_train
@@ -354,7 +337,7 @@ if __name__ == '__main__':
     print(agent.message)
     print("Environment Observation_space: ", env.observation_space)
     print("Environment Action_space: ", env.action_space)
-    print("Num of Episodes: %i | BATCH: %i" % (EPISODES,BATCH))
+    print("Num of Episodes: %i | Batch: %i | Epochs %i" % (EPISODES,BATCH,epc))
     if agent.lstm: print("LSTM layer is ON!")
     print('-----------------------------------')
     print("\n:::::Algorithm_Parameters::::::")
@@ -393,7 +376,7 @@ if __name__ == '__main__':
             end = time.time()
             # Set time constrain: 40secs stop episode
             time_space = end - start
-            if time_space > 30:
+            if time_space > 40:
                 flag = True
 
             if rew <= -100:
@@ -428,7 +411,7 @@ if __name__ == '__main__':
                 if traj >= BATCH:
                     print('Training... >_')
                     training_time = agent.TRAIN(BATCH)
-                    agent.deck.clear()
+                    #agent.deck.clear()
                     traj = 0
                     print('Training Time %.2f' % training_time)
                 break
