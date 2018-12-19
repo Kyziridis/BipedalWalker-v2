@@ -100,7 +100,7 @@ class AGENT:
             # Take actor grafients################################
             self.actor_critic_grads = tf.placeholder(tf.float32, [None,self.ny])
             actor_local_weights = self.actor_local.trainable_weights
-            self.actor_grads = tf.gradients(self.actor_local.output, actor_local_weights, -self.actor_critic_grads)
+            self.actor_grads = tf.gradients(self.actor_local.output, actor_local_weights, self.actor_critic_grads)
             grads = zip(self.actor_grads, actor_local_weights)
             self.optimize = tf.train.AdamOptimizer(self.lr_actor).apply_gradients(grads)
             ######################################################################
