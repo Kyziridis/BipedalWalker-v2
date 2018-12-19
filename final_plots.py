@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 plt.style.use('ggplot')
 import os
 import pandas as pd
-os.chdir("/home/dead/Documents/Master_Research/my_ppo")
+os.chdir("final_results/")
 
 
 
