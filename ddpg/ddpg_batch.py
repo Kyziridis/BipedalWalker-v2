@@ -41,7 +41,7 @@ if lstm == 'y':
 else:
     lstm = False
 DUMMY_ACTION, DUMMY_VALUE = np.zeros((1, 4)), np.zeros((1,1))
-
+tf.device('cpu=0')
 
 def actor_loss(advantage, old_prediction):
     def loss(y_true, y_pred):
@@ -76,7 +76,7 @@ class AGENT:
 
         self.e = 1.0
         self.e_= 0.01
-        self.dc= 0.999
+        self.dc= 0.99
         self.tau = 0.001
         self.weight_decay = 0.001
         self.los = []
@@ -100,7 +100,7 @@ class AGENT:
             # Take actor grafients################################
             self.actor_critic_grads = tf.placeholder(tf.float32, [None,self.ny])
             actor_local_weights = self.actor_local.trainable_weights
-            self.actor_grads = tf.gradients(self.actor_local.output, actor_local_weights, -self.actor_critic_grads)
+            self.actor_grads = tf.gradients(self.actor_local.output, actor_local_weights, self.actor_critic_grads)
             grads = zip(self.actor_grads, actor_local_weights)
             self.optimize = tf.train.AdamOptimizer(self.lr_actor).apply_gradients(grads)
             ######################################################################
@@ -127,7 +127,7 @@ class AGENT:
                 epsilon.append(self.e)
             action_=np.random.uniform(-1,1,4)
             return action_
-        
+
         action = self.actor_local.predict([DUMMY_ACTION,DUMMY_VALUE,lidar,state])
         return action
 
@@ -170,7 +170,7 @@ class AGENT:
         else:
             merged_lstm = Dense(self.layers[1],activation='relu',kernel_regularizer=self.k_r ,\
                                 kernel_initializer=self.initializer)(merged)
-            
+
         output = Dense(self.ny, activation='tanh', kernel_regularizer=self.k_r,\
                        kernel_initializer=self.final_initializer)(merged_lstm)
 
@@ -220,8 +220,8 @@ class AGENT:
         model  = Model(input=[lidar_input,state_input,action_input], output=output)
         adam  = Adam(lr=self.lr_critic, decay=0.6)
         model.compile(loss="mse", optimizer=adam)
-        return lidar_input,state_input, action_input, model     
-    
+        return lidar_input,state_input, action_input, model
+
     def _train_critic(self, lidar, state, act, Q_target):
         for _ in range(epc):
             self.critic_local.train_on_batch([lidar,state,act], [Q_target])
@@ -265,12 +265,12 @@ class AGENT:
         for i in range(len(rewards)-2,-1,-1):
             discounted_rewards[i] = rewards[i] + rewards[i+1]*self.gamma**i
         return discounted_rewards
-    
+
     def create_batch(self,BATCH):
         state, lidar, state_new ,lidar_new, current_reward, advantage =[],[],[],[],[], []
         discounted_rewards = self.discount_rewards(self.ep_rewards[0:BATCH])
         traj = [self.ep_obs[0:BATCH], self.ep_act[0:BATCH], discounted_rewards,\
-                       self.ep_obs_new[0:BATCH], self.ep_flags[0:BATCH]]    
+                       self.ep_obs_new[0:BATCH], self.ep_flags[0:BATCH]]
         rew = np.array(traj[2]).reshape(-1,1)
         act = np.array(traj[1])
         for observation, obs_new in zip(traj[0],traj[3]):
@@ -278,21 +278,21 @@ class AGENT:
             lidar.append(observation[0][14:].reshape((10,)))
             state_new.append(obs_new[0][:14].reshape((14,)))
             lidar_new.append(obs_new[0][14:].reshape((10,)))
-            
+
         state = np.array(state)
         lidar  = np.array(lidar)
         state_new  = np.array(state_new)
         lidar_new  = np.array(lidar_new)
-        
+
         current_reward = self.critic_target.predict([lidar,state,act])
         advantage = rew - current_reward
         target_action = self.actor_target.predict([act,advantage,lidar_new,state_new])
         future_reward = self.critic_target.predict([lidar_new,state_new, target_action])
-        Q_target =current_reward + self.alpha*(rew + self.gamma * future_reward - current_reward)     
+        Q_target =self.alpha*(rew + self.gamma * future_reward - current_reward)
         #print('cr: ' + str(current_reward.shape) + 'target: ' + str(target_action.shape) + 'fut: ' + str(future_reward.shape) + 'adv: ' + str(advantage.shape))
         return lidar, state, act, Q_target , advantage, rew
-        
-    def TRAIN(self, BATCH):        
+
+    def TRAIN(self, BATCH):
         lidar, state, act, Q_target , advantage, rew = self.create_batch(BATCH)
         start_train = time.time()
         # Train Critic
@@ -304,9 +304,11 @@ class AGENT:
         # Update Weights 
         self.update_target() # Update the netokr local and target weights for actor AND critic
         end = time.time() - start_train
-        # Empty the lists
-        self.ep_rewards, self.ep_obs, self.ep_act, self.ep_obs_new, self.ep_flags=[], [], [],[], []
         return end
+
+    def Clear(self):
+
+        self.ep_rewards, self.ep_obs, self.ep_act, self.ep_obs_new, self.ep_flags=[], [], [],[], []
 
 if __name__ == '__main__':
 
@@ -376,12 +378,8 @@ if __name__ == '__main__':
             end = time.time()
             # Set time constrain: 40secs stop episode
             time_space = end - start
-            if time_space > 40:
+            if time_space > 200:
                 flag = True
-
-            if rew <= -100:
-                flag = True
-                agent.ep_rewards = [i-20 for i in agent.ep_rewards]
 
             if flag==True:
                 # Append rewards history
@@ -408,11 +406,17 @@ if __name__ == '__main__':
                     f.write('\n' + str(np.mean(rewards_over_time[-100:])))
                     f.close()
 
+                if i % 100 <= 20 and rew >= -1.0:
+                    print('Trainining Good Episode.. >_')
+                    training_time = agent.TRAIN(counter)
+                    print('Training Time %.2f' % training_time)
+
                 if traj >= BATCH:
                     print('Training... >_')
                     training_time = agent.TRAIN(BATCH)
                     #agent.deck.clear()
                     traj = 0
+                    agent.Clear()
                     print('Training Time %.2f' % training_time)
                 break
             # END_IF
@@ -444,14 +448,4 @@ if __name__ == '__main__':
     plt.title('Average Reward per 100 episodes')
     plt.savefig("mean_100.png")
 
-
-
-
-
-
-
-
-
-
-
-
+                                                                                                                                                        
