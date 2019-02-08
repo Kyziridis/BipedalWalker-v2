@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Created on Wed Apr 25 20:41:53 2018
 
@@ -62,6 +60,7 @@ Parameters:
 """
 
 #from __future__ import print_function
+import pandas as pd
 from keras.models import load_model, Sequential, Model
 from keras.initializers import RandomUniform
 from keras.regularizers import l2
