@@ -7,6 +7,7 @@ Created on Wed Apr 25 20:41:53 2018
 """
 
 #from __future__ import print_function
+import pandas
 import keras
 from keras.models import load_model
 from keras.initializers import RandomUniform

@@ -9,6 +9,7 @@ ACTOR-CRITIC Network for Robot Locomotion
 """
 
 #from __future__ import print_function
+import pandas
 from keras.models import load_model, Sequential, Model
 from keras.initializers import RandomUniform, RandomNormal
 from keras.regularizers import l2
