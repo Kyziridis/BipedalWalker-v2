@@ -1,9 +1,7 @@
 # Initial framework taken from https://github.com/jaara/AI-blog/blob/master/CartPole-A3C.py
-
+import pandas
 import numpy as np
-
 import gym
-
 from keras.models import Model
 from keras.layers import Input, Dense, Dropout
 from keras import backend as K
